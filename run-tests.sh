@@ -11,17 +11,22 @@ Usage: $0 [OPTIONS]
 Run the emacs-caretest test suite.
 
 Options:
-  --clean   Delete the examples/generated-example-tests directory and exit.
-  --help    Show this message and exit.
-
-Without options, the script:
-  1. Runs the example generators to populate examples/generated-example-tests/.
-  2. Runs the generated example tests.
-  3. Runs the framework unit tests.
+  --core        Run the framework unit tests.
+  --generators  Run the example generators and test the generated output.
+  --all         Run generators and all tests (--generators + --core).
+  --clean       Delete the examples/generated-example-tests directory and exit.
+  --help        Show this message and exit.
 EOF
 }
 
+if [ $# -eq 0 ]; then
+    usage
+    exit 0
+fi
+
 CLEAN=false
+RUN_CORE=false
+RUN_GENERATORS=false
 
 for arg in "$@"; do
     case "$arg" in
@@ -31,6 +36,16 @@ for arg in "$@"; do
             ;;
         --clean)
             CLEAN=true
+            ;;
+        --core)
+            RUN_CORE=true
+            ;;
+        --generators)
+            RUN_GENERATORS=true
+            ;;
+        --all)
+            RUN_CORE=true
+            RUN_GENERATORS=true
             ;;
         *)
             echo "Unknown option: $arg" >&2
@@ -52,34 +67,32 @@ fi
 
 cd "$SCRIPT_DIR"
 
-# Remove stale generated files so generators start fresh each run
-rm -f "$GENERATED_DIR/generated-tesmo-example.el"
-rm -f "$GENERATED_DIR/generated-tesmut-example.el"
+if $RUN_GENERATORS; then
+    # Remove stale generated files so generators start fresh each run
+    rm -f "$GENERATED_DIR/generated-tesmo-example.el"
+    rm -f "$GENERATED_DIR/generated-tesmut-example.el"
 
-# Run example generators (they create examples/generated-example-tests/ if needed)
-emacs -batch \
-    -l cpo-tesmo.el \
-    -l cpo-tesmo-generator.el \
-    -l examples/example-tesmo-generator.el
+    # Run example generators (they create examples/generated-example-tests/ if needed)
+    emacs -batch \
+        -l cpo-tesmo.el \
+        -l cpo-tesmo-generator.el \
+        -l examples/example-tesmo-generator.el
 
-emacs -batch \
-    -l cpo-tesmut.el \
-    -l cpo-tesmut-generator.el \
-    -l examples/example-tesmut-generator.el
+    emacs -batch \
+        -l cpo-tesmut.el \
+        -l cpo-tesmut-generator.el \
+        -l examples/example-tesmut-generator.el
+fi
 
-# Run generated example tests
-emacs -batch \
-    -l ert \
-    -l cpo-tesmo.el \
-    -l "$GENERATED_DIR/generated-tesmo-example.el" \
-    -f ert-run-tests-batch-and-exit
+# Build test load args and run all selected tests in a single emacs invocation
+TEST_ARGS=(-l ert -l cpo-tesmo.el -l cpo-tesmut.el)
 
-emacs -batch \
-    -l ert \
-    -l cpo-tesmut.el \
-    -l "$GENERATED_DIR/generated-tesmut-example.el" \
-    -f ert-run-tests-batch-and-exit
+if $RUN_CORE; then
+    TEST_ARGS+=(-l test-cpo-tesmo.el -l test-cpo-tesmut.el)
+fi
 
-# Run framework unit tests
-emacs -batch -l ert -l cpo-tesmo.el -l test-cpo-tesmo.el -f ert-run-tests-batch-and-exit
-emacs -batch -l ert -l cpo-tesmut.el -l test-cpo-tesmut.el -f ert-run-tests-batch-and-exit
+if $RUN_GENERATORS; then
+    TEST_ARGS+=(-l "$GENERATED_DIR/generated-tesmo-example.el" -l "$GENERATED_DIR/generated-tesmut-example.el")
+fi
+
+emacs -batch "${TEST_ARGS[@]}" -f ert-run-tests-batch-and-exit
