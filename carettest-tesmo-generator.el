@@ -133,8 +133,13 @@ If TRANSIENT-MARK-MODE-VAL is non-nil and not t, include :transient-mark-mode in
                                              ,@(when setup `(:setup ,setup))
                                              :points ("<p0>" "<p1>")
                                              :marks ("<m0>" "<m1>"))))
-      ;; Use pp-to-string to format the S-expression nicely
-      (pp-to-string test-expr))))
+      ;; Use pp-to-string to format the S-expression nicely, then replace
+      ;; escaped newlines with literal newlines for readability, then
+      ;; insert a newline before the opening quote of the test string.
+      (replace-regexp-in-string
+       "\\((carettest-tesmo-test [^ ]+\\) \""
+       "\\1\n\""
+       (replace-regexp-in-string "\\\\n" "\n" (pp-to-string test-expr))))))
 
 (defun carettest--tesmo-generator-function-name (func)
   "Get a readable name for FUNC.
