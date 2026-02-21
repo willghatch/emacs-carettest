@@ -131,8 +131,8 @@ If TRANSIENT-MARK-MODE-VAL is non-nil and not t, include :transient-mark-mode in
                                    ,movement-expr
                                    :transient-mark-mode ,transient-mark-mode-val
                                    ,@(when setup `(:setup ,setup))
-                                   :points '("<p0>" "<p1>")
-                                   :marks '("<m0>" "<m1>"))))
+                                   :points ("<p0>" "<p1>")
+                                   :marks ("<m0>" "<m1>"))))
       ;; Use pp-to-string to format the S-expression nicely
       (pp-to-string test-expr))))
 
@@ -202,7 +202,7 @@ TRANSIENT-MARK-MODE-SETTING: Value for transient-mark-mode during tests"
                      (mark-end-pos (nth 3 result))
                      (func-name (cpo-tesmo-generator--function-name original-func-form))
                      (random-suffix (cpo-tesmo-generator--random-string 6))
-                     (test-name (format "%s-%s__%s" test-prefix func-name random-suffix))
+                     (test-name (intern (format "%s-%s__%s" test-prefix func-name random-suffix)))
                      (test-code (cpo-tesmo-generator--create-cpo-tesmo-test
                                  test-text start-pos end-pos mark-start-pos mark-end-pos
                                  executable-func test-name original-func-form transient-mark-mode-setting setup)))
@@ -260,7 +260,7 @@ TRANSIENT-MARK-MODE-SETTING: Value for transient-mark-mode during tests"
             (insert test "\n\n"))))
 
       (message "Generated %d tests in %s (total: %d)" test-count output-file total-test-count)
-      test-count))
+      test-count)))
 
 (defmacro cpo-tesmo-generate-tests (test-text num-positions movement-functions output-file test-prefix
                                           &rest args)

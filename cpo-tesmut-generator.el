@@ -211,7 +211,7 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
               (setq buffer-states (reverse buffer-states))
               (let* ((sequence-name (mapconcat #'cpo-tesmut-generator--function-name original-funcs "-"))
                      (random-suffix (cpo-tesmut-generator--random-string 6))
-                     (test-name (format "%s-seq-%s__%s" test-prefix sequence-name random-suffix))
+                     (test-name (intern (format "%s-seq-%s__%s" test-prefix sequence-name random-suffix)))
                      (test-code (cpo-tesmut-generator--create-tesmut-sequence-test
                                  buffer-states executable-funcs test-name original-funcs transient-mark-mode-setting setup)))
                 (push test-code generated-tests)
@@ -245,7 +245,7 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
                        (after-text (nth 1 result))
                        (func-name (cpo-tesmut-generator--function-name original-func-form))
                        (random-suffix (cpo-tesmut-generator--random-string 6))
-                       (test-name (format "%s-%s__%s" test-prefix func-name random-suffix))
+                       (test-name (intern (format "%s-%s__%s" test-prefix func-name random-suffix)))
                        (test-code (cpo-tesmut-generator--create-cpo-tesmut-test
                                    before-text after-text executable-func test-name original-func-form transient-mark-mode-setting setup)))
                   (push test-code generated-tests)
@@ -302,7 +302,7 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
             (insert test "\n\n"))))
 
       (message "Generated %d tests in %s (total: %d)" test-count output-file total-test-count)
-      test-count))
+      test-count)))
 
 (defmacro cpo-tesmut-generate-tests (test-text num-positions mutation-functions output-file test-prefix
                                            &rest args)
