@@ -1,0 +1,220 @@
+;;; test-cpo-tesmut.el --- Tests for the cpo-tesmut testing framework -*- lexical-binding: t; -*-
+
+;; To run these tests from the command line:
+;; emacs -batch -l ert -l cpo-tesmut.el -l test-cpo-tesmut.el -f ert-run-tests-batch-and-exit
+
+(require 'cpo-tesmut)
+
+;;; Basic buffer mutation tests that should pass
+
+(cpo-tesmut-test test-insert-text-basic
+             :before "hello <p>world"
+             :after "hello X<p>world"
+             :function (lambda () (insert "X")))
+
+(cpo-tesmut-test test-delete-char-basic
+             :before "hel<p>lo world"
+             :after "hel<p>o world"
+             :function (lambda () (delete-char 1)))
+
+(cpo-tesmut-test test-backward-delete-char-basic
+             "hel<p>lo world"
+             "he<p>lo world"
+             (lambda () (backward-delete-char 1)))
+
+(cpo-tesmut-test test-kill-word-basic
+             "hello <p>world test"
+             "hello <p> test"
+             (lambda () (kill-word 1)))
+
+(cpo-tesmut-test test-yank-basic
+             "hello <p>world"
+             "hello text<p>world"
+             'yank
+             :setup (progn (kill-new "text") nil))
+
+;;; Tests with mark (region operations)
+
+(cpo-tesmut-test test-kill-region-basic
+             "hello <p>world<m> test"
+             "hello <p><m> test"
+             'kill-region)
+
+(cpo-tesmut-test test-delete-region-basic
+             "hello <p>world<m> test"
+             "hello <p><m> test"
+             'delete-region)
+
+(cpo-tesmut-test test-upcase-region
+             "hello <p>world<m> test"
+             "hello <p>WORLD<m> test"
+             'upcase-region)
+
+(cpo-tesmut-test test-downcase-region
+             "hello <p>WORLD<m> test"
+             "hello <p>world<m> test"
+             'downcase-region)
+
+;;; Tests with closures/lambdas
+
+(cpo-tesmut-test test-insert-multiple-chars
+             "hello <p>world"
+             "hello XXX<p>world"
+             (lambda () (insert "XXX")))
+
+(cpo-tesmut-test test-delete-multiple-chars
+             "hello<p>world"
+             "hel<p>world"
+             (lambda () (backward-delete-char 2)))
+
+;;; Tests with setup code
+
+(cpo-tesmut-test test-insert-with-setup
+             "hello <p>world"
+             "hello setup<p>world"
+             (lambda () (insert "setup")))
+
+;;; Tests with custom markers
+
+(cpo-tesmut-test test-custom-markers-insert
+             "hello |point|world"
+             "hello X|point|world"
+             (lambda () (insert "X"))
+             :point-marker "|point|")
+
+(cpo-tesmut-test test-custom-markers-region
+             "hello |mark|world|point| test"
+             "hello |mark|WORLD|point| test"
+             'upcase-region
+             :point-marker "|point|"
+             :mark-marker "|mark|")
+
+;;; Expected failure tests - these demonstrate tesmut catching errors
+
+(cpo-tesmut-test test-insert-wrong-result
+             "hello <p>world"
+             "hello Y<p>world"
+             (lambda () (insert "X"))
+             :expected-result :failed)
+
+(cpo-tesmut-test test-delete-wrong-result
+             "hello<p>world"
+             "hello<p>world"
+             'delete-char
+             :expected-result :failed)
+
+;;; Edge case tests
+
+(cpo-tesmut-test test-empty-buffer-insert
+             "<p>"
+             "X<p>"
+             (lambda () (insert "X")))
+
+(cpo-tesmut-test test-multiline-insert
+             "first line\n<p>second line"
+             "first line\nX<p>second line"
+             (lambda () (insert "X")))
+
+(cpo-tesmut-test test-beginning-of-buffer-insert
+             "<p>hello world"
+             "X<p>hello world"
+             (lambda () (insert "X")))
+
+(cpo-tesmut-test test-end-of-buffer-insert
+             "hello world<p>"
+             "hello worldX<p>"
+             (lambda () (insert "X")))
+
+;;; Tests for cpo-tesmut-test (multi-step testing)
+
+(cpo-tesmut-test test-insert-delete-sequence
+	           :buffer-states '("hello <p>world"
+			                        "hello X<p>world"
+			                        "hello X<p>orld")
+	           :functions '((lambda () (insert "X"))
+			                    (lambda () (delete-char 1))))
+
+(cpo-tesmut-test test-kill-yank-sequence
+	           :buffer-states '("hello <p>world test"
+			                        "hello <p> test"
+			                        "hello world<p> test")
+	           :functions '((lambda () (kill-word 1))
+			                    yank))
+
+(cpo-tesmut-test test-region-operations-sequence
+	           :buffer-states '("hello <p>WORLD<m> test"
+			                        "hello <p>world<m> test"
+			                        "hello <p><m> test")
+	           :functions '(downcase-region
+			                    kill-region))
+
+(cpo-tesmut-test test-multi-insert-sequence
+	           :buffer-states '("<p>text"
+			                        "A<p>text"
+			                        "AB<p>text"
+			                        "ABC<p>text")
+	           :functions '((lambda () (insert "A"))
+			                    (lambda () (insert "B"))
+			                    (lambda () (insert "C"))))
+
+;;; Expected failure test for sequence
+
+(cpo-tesmut-test test-sequence-wrong-result
+	           :buffer-states '("hello <p>world"
+			                        "hello X<p>world"
+			                        "hello XY<p>world")
+	           :functions '((lambda () (insert "X"))
+			                    (lambda () (insert "Z")))
+	           :expected-result :failed)
+
+;;; Tests for cpo-tesmut's error message format
+
+(ert-deftest test-tesmut-error-message ()
+  "Test that cpo-tesmut produces expected error messages."
+  (cpo-tesmut-test inner-mutation-test
+	             "hello <p>world"
+	             "hello Y<p>world"
+	             (lambda () (insert "X")))
+  (let* ((inner-test (ert-get-test 'inner-mutation-test))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))
+    (let* ((error-condition (ert-test-result-with-condition-condition result))
+           (error-message (cadr error-condition)))
+      (should (stringp error-message))
+      (should (string-match "inner-mutation-test: Actual:" error-message))
+      (should (string-match "Expected:" error-message))
+      (should (string-match "hello X<p>world" error-message))
+      (should (string-match "hello Y<p>world" error-message)))))
+
+(ert-deftest test-tesmut-multiline-error-message ()
+  "Test that cpo-tesmut handles multiline text in error messages correctly."
+  (cpo-tesmut-test inner-multiline-mutation-test
+	             "line one\n<p>line two"
+	             "line one\nY<p>line two"
+	             (lambda () (insert "X")))
+  (let* ((inner-test (ert-get-test 'inner-multiline-mutation-test))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))
+    (let* ((error-condition (ert-test-result-with-condition-condition result))
+           (error-message (cadr error-condition)))
+      (should (stringp error-message))
+      (should (string-match "inner-multiline-mutation-test: Actual:" error-message))
+      (should (string-match "Expected:" error-message)))))
+
+(ert-deftest test-tesmut-mark-handling ()
+  "Test that cpo-tesmut properly handles mark positions in results."
+  (cpo-tesmut-test inner-mark-mutation-test
+	             "hello <m>world<p> test"
+	             "hello <m>WRONG<p> test"
+	             'upcase-region)
+  (let* ((inner-test (ert-get-test 'inner-mark-mutation-test))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))
+    (let* ((error-condition (ert-test-result-with-condition-condition result))
+           (error-message (cadr error-condition)))
+      (should (stringp error-message))
+      (should (string-match "inner-mark-mutation-test: Actual:" error-message))
+      (should (string-match "hello <m>WORLD<p> test" error-message))
+      (should (string-match "hello <m>WRONG<p> test" error-message)))))
+
+(provide 'test-cpo-tesmut)
