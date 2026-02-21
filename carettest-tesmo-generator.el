@@ -262,9 +262,9 @@ TRANSIENT-MARK-MODE-SETTING: Value for transient-mark-mode during tests"
       (message "Generated %d tests in %s (total: %d)" test-count output-file total-test-count)
       test-count)))
 
-(defmacro carettest-tesmo-generate-tests (test-text num-positions movement-functions output-file test-prefix
+(defmacro carettest-tesmo-generate-tests (test-text num-positions movement-functions test-prefix
                                                     &rest args)
-  "Generate random tesmo tests and write them to OUTPUT-FILE.
+  "Generate random tesmo tests and write them to a file.
 
 This is a macro wrapper around `carettest--tesmo-generate-tests' that properly handles
 default values for optional arguments.
@@ -275,36 +275,42 @@ MOVEMENT-FUNCTIONS: List of movement functions to test. Each element can be:
   - A symbol (e.g. 'forward-word)
   - A lambda form (e.g. '(lambda () (forward-word 2)))
   - A list of (name function) for better closure naming (e.g. '(\"forward-2-words\" (lambda () (forward-word 2))))
-OUTPUT-FILE: File to write generated tests to (basename when :dest-dir is given)
 TEST-PREFIX: Prefix for generated test names
 
 Keyword arguments:
-:dest-dir DIR - Directory to write OUTPUT-FILE into; created if absent (default nil)
+:output-file FILE - Output file name (basename when :dest-dir is given); defaults to TEST-PREFIX.el
+:dest-dir DIR - Directory to write the output file into; created if absent (default nil)
 :set-mark-prob PROB - Probability (0.0-1.0) of setting mark before movement (default 0.3)
 :transient-mark-mode-prob PROB - Probability (0.0-1.0) that transient-mark-mode is enabled (default 1.0)
 :setup FORM - Setup code to include in generated tests (default nil)
 :file-name-random-replacement VAL - Controls random characters in the output file name (default nil).
   nil: no modification.
-  A string: replace every occurrence of that string in OUTPUT-FILE with 6 random digits
+  A string: replace every occurrence of that string in the file name with 6 random digits
     (e.g. :file-name-random-replacement \"RANDOM\" turns \"test-RANDOM.el\" into \"test-472938.el\").
-  t: insert 6 random digits immediately before the final \".el\" suffix of OUTPUT-FILE
+  t: insert 6 random digits immediately before the final \".el\" suffix of the file name
     (e.g. \"my-tests.el\" becomes \"my-tests472938.el\")."
   (let ((set-mark-prob 0.3)
         (transient-mark-mode-prob 1.0)
         (setup nil)
         (dest-dir nil)
         (file-name-random-replacement nil)
+        (output-file nil)
         (remaining-args args))
 
     ;; Parse keyword arguments
     (while remaining-args
       (pcase (pop remaining-args)
+        (:output-file (setq output-file (pop remaining-args)))
         (:dest-dir (setq dest-dir (pop remaining-args)))
         (:set-mark-prob (setq set-mark-prob (pop remaining-args)))
         (:transient-mark-mode-prob (setq transient-mark-mode-prob (pop remaining-args)))
         (:setup (setq setup (pop remaining-args)))
         (:file-name-random-replacement (setq file-name-random-replacement (pop remaining-args)))
         (other (error "Unknown keyword argument: %s" other))))
+
+    ;; Derive output-file from test-prefix when not given explicitly
+    (unless output-file
+      (setq output-file (concat test-prefix ".el")))
 
     ;; Determine transient-mark-mode value based on probability
     (let* ((transient-mark-mode-val (if (< (random 100) (* transient-mark-mode-prob 100)) t nil))
@@ -342,24 +348,24 @@ Keyword arguments:
    "The quick brown fox jumps over the lazy dog"
    10
    '(forward-word backward-word forward-char backward-char)
-   "__testing_cpo_tesmo_generator_1.el"
-   "test-basic")
+   "test-basic"
+   :output-file "__testing_cpo_tesmo_generator_1.el")
 
   ;; Test 2: Line movement with multiline text
   (carettest-tesmo-generate-tests
    "First line of text\nSecond line here\nThird line with more words\nFourth and final line"
    8
    '(beginning-of-line end-of-line forward-line backward-line)
-   "__testing_cpo_tesmo_generator_2.el"
-   "test-lines")
+   "test-lines"
+   :output-file "__testing_cpo_tesmo_generator_2.el")
 
   ;; Test 3: Buffer movement
   (carettest-tesmo-generate-tests
    "Start of buffer\nMiddle content\nEnd of buffer"
    5
    '(beginning-of-buffer end-of-buffer)
-   "__testing_cpo_tesmo_generator_3.el"
    "test-buffer"
+   :output-file "__testing_cpo_tesmo_generator_3.el"
    :transient-mark-mode-prob 0.0) ; Never enable transient-mark-mode
 
   ;; Test 4: Mixed movements with higher mark probability
@@ -367,8 +373,8 @@ Keyword arguments:
    "Hello world! This is a test string.\nWith multiple lines for testing.\nAnd punctuation, too!"
    15
    '(forward-word backward-word forward-sentence backward-sentence)
-   "__testing_cpo_tesmo_generator_4.el"
    "test-mixed"
+   :output-file "__testing_cpo_tesmo_generator_4.el"
    :set-mark-prob 0.7) ; 70% chance of setting mark
 
   ;; Test 5: Lambda functions with better names (demonstrates new naming feature)
@@ -381,8 +387,8 @@ Keyword arguments:
          '("backward-word-2" (lambda () (backward-word 2)))
          '("forward-char-5" (lambda () (forward-char 5)))
          '("backward-char-3" (lambda () (backward-char 3))))
-   "__testing_cpo_tesmo_generator_5.el"
-   "test-lambda"))
+   "test-lambda"
+   :output-file "__testing_cpo_tesmo_generator_5.el"))
 
 (defmacro carettest-tesmo-generate-tests-batch (functions output-file base-test-prefix &rest test-inputs)
   "Generate multiple test suites using the same function list but different test inputs.
@@ -426,8 +432,8 @@ Example usage:
                   ,text
                   ,positions
                   (quote ,functions)
-                  ,output-file
                   ,test-name
+                  :output-file ,output-file
                   :set-mark-prob ,set-mark-prob
                   :transient-mark-mode-prob ,transient-mark-mode-prob
                   ,@(when setup `(:setup ,setup)))

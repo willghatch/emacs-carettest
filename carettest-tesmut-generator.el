@@ -304,9 +304,9 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
       (message "Generated %d tests in %s (total: %d)" test-count output-file total-test-count)
       test-count)))
 
-(defmacro carettest-tesmut-generate-tests (test-text num-positions mutation-functions output-file test-prefix
+(defmacro carettest-tesmut-generate-tests (test-text num-positions mutation-functions test-prefix
                                                      &rest args)
-  "Generate random tesmut tests and write them to OUTPUT-FILE.
+  "Generate random tesmut tests and write them to a file.
 
 This is a macro wrapper around `carettest--tesmut-generate-tests' that properly handles
 default values for optional arguments.
@@ -318,20 +318,20 @@ MUTATION-FUNCTIONS: List of mutation functions to test. Each element can be:
   - A lambda form (e.g. '(lambda () (insert \"X\")))
   - A list of (name function) for better closure naming (e.g. '(\"insert-X\" (lambda () (insert \"X\"))))
   - A list of functions for multi-step sequence tests
-OUTPUT-FILE: File to write generated tests to (basename when :dest-dir is given)
 TEST-PREFIX: Prefix for generated test names
 
 Keyword arguments:
-:dest-dir DIR - Directory to write OUTPUT-FILE into; created if absent (default nil)
+:output-file FILE - Output file name (basename when :dest-dir is given); defaults to TEST-PREFIX.el
+:dest-dir DIR - Directory to write the output file into; created if absent (default nil)
 :set-mark-prob PROB - Probability (0.0-1.0) of setting mark before mutation (default 0.3)
 :transient-mark-mode-prob PROB - Probability (0.0-1.0) that transient-mark-mode is enabled (default 1.0)
 :generate-sequences BOOL - Generate sequence tests for lists of functions (default t)
 :setup FORM - Setup code to include in generated tests (default nil)
 :file-name-random-replacement VAL - Controls random characters in the output file name (default nil).
   nil: no modification.
-  A string: replace every occurrence of that string in OUTPUT-FILE with 6 random digits
+  A string: replace every occurrence of that string in the file name with 6 random digits
     (e.g. :file-name-random-replacement \"RANDOM\" turns \"test-RANDOM.el\" into \"test-472938.el\").
-  t: insert 6 random digits immediately before the final \".el\" suffix of OUTPUT-FILE
+  t: insert 6 random digits immediately before the final \".el\" suffix of the file name
     (e.g. \"my-tests.el\" becomes \"my-tests472938.el\")."
   (let ((set-mark-prob 0.3)
         (transient-mark-mode-prob 1.0)
@@ -339,11 +339,13 @@ Keyword arguments:
         (setup nil)
         (dest-dir nil)
         (file-name-random-replacement nil)
+        (output-file nil)
         (remaining-args args))
 
     ;; Parse keyword arguments
     (while remaining-args
       (pcase (pop remaining-args)
+        (:output-file (setq output-file (pop remaining-args)))
         (:dest-dir (setq dest-dir (pop remaining-args)))
         (:set-mark-prob (setq set-mark-prob (pop remaining-args)))
         (:transient-mark-mode-prob (setq transient-mark-mode-prob (pop remaining-args)))
@@ -351,6 +353,10 @@ Keyword arguments:
         (:setup (setq setup (pop remaining-args)))
         (:file-name-random-replacement (setq file-name-random-replacement (pop remaining-args)))
         (other (error "Unknown keyword argument: %s" other))))
+
+    ;; Derive output-file from test-prefix when not given explicitly
+    (unless output-file
+      (setq output-file (concat test-prefix ".el")))
 
     ;; Determine transient-mark-mode value based on probability
     (let* ((transient-mark-mode-val (if (< (random 100) (* transient-mark-mode-prob 100)) t nil))
@@ -391,8 +397,8 @@ Keyword arguments:
          '("insert-ABC" (lambda () (insert "ABC")))
          'delete-char
          'backward-delete-char)
-   "__testing_cpo_tesmut_generator_1.el"
-   "test-basic")
+   "test-basic"
+   :output-file "__testing_cpo_tesmut_generator_1.el")
 
   ;; Test 2: Word operations with multiline text
   (carettest-tesmut-generate-tests
@@ -401,8 +407,8 @@ Keyword arguments:
    (list 'kill-word
          'backward-kill-word
          '("kill-2-words" (lambda () (kill-word 2))))
-   "__testing_cpo_tesmut_generator_2.el"
-   "test-words")
+   "test-words"
+   :output-file "__testing_cpo_tesmut_generator_2.el")
 
   ;; Test 3: Region operations (higher mark probability)
   (carettest-tesmut-generate-tests
@@ -411,8 +417,8 @@ Keyword arguments:
    (list 'kill-region
          'upcase-region
          'downcase-region)
-   "__testing_cpo_tesmut_generator_3.el"
    "test-region"
+   :output-file "__testing_cpo_tesmut_generator_3.el"
    :set-mark-prob 0.8) ; 80% chance of setting mark
 
   ;; Test 4: Sequence tests with mixed mutations
@@ -425,8 +431,8 @@ Keyword arguments:
          (list '("insert-A" (lambda () (insert "A")))
                'delete-char
                '("insert-B" (lambda () (insert "B")))))
-   "__testing_cpo_tesmut_generator_4.el"
    "test-sequences"
+   :output-file "__testing_cpo_tesmut_generator_4.el"
    :set-mark-prob 0.5)
 
   ;; Test 5: Yank operations (requires kill-ring setup)
@@ -436,8 +442,8 @@ Keyword arguments:
    (list 'kill-word
          '("yank-after-kill" (lambda () (kill-word 1) (forward-word 1) (yank)))
          '("kill-and-yank-twice" (lambda () (kill-word 1) (yank) (yank))))
-   "__testing_cpo_tesmut_generator_5.el"
-   "test-yank"))
+   "test-yank"
+   :output-file "__testing_cpo_tesmut_generator_5.el"))
 
 (defmacro carettest-tesmut-generate-tests-batch (functions output-file base-test-prefix &rest test-inputs)
   "Generate multiple test suites using the same function list but different test inputs.
@@ -485,8 +491,8 @@ Example usage:
                   ,text
                   ,positions
                   (quote ,functions)
-                  ,output-file
                   ,test-name
+                  :output-file ,output-file
                   :set-mark-prob ,set-mark-prob
                   :transient-mark-mode-prob ,transient-mark-mode-prob
                   :generate-sequences ,generate-sequences
