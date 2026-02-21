@@ -1,4 +1,5 @@
-;;; example-tesmo-generator.el --- Example: generate tests for basic Emacs movements -*- lexical-binding: t; -*-
+#!/bin/sh
+":"; exec emacs --batch -L "$(dirname "$0")/.." --load "$0" "$@" # ;;; example-tesmo-generator.el --- Example: generate tests for basic Emacs movements -*- lexical-binding: t; -*-
 
 ;; This example uses carettest-tesmo-generator to capture behavior of built-in
 ;; Emacs movement commands on basic text, writing the result to
