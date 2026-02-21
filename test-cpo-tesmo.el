@@ -63,18 +63,27 @@
             "text |start|here|end| more"
             'forward-word)
 
-;;; Expected failure tests - these demonstrate tesmo catching errors
-(cpo-tesmo-test test-forward-word-wrong-position
-            "hello <p0>world <p1>test"
-            'forward-word
-            :expected-result :failed)
+;;; Tests verifying tesmo catches errors
 
-(cpo-tesmo-test test-mark-position-wrong
-            "hello <m0>world<p0> test<p1> more<m1>"
-            (lambda ()
-              (set-mark (point))
-              (forward-word 1))
-            :expected-result :failed)
+(ert-deftest test-forward-word-wrong-position ()
+  "Verify that tesmo catches a wrong point position."
+  (cpo-tesmo-test inner-forward-word-wrong-position
+              "hello <p0>world <p1>test"
+              'forward-word)
+  (let* ((inner-test (ert-get-test 'inner-forward-word-wrong-position))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
+
+(ert-deftest test-mark-position-wrong ()
+  "Verify that tesmo catches a wrong mark position."
+  (cpo-tesmo-test inner-mark-position-wrong
+              "hello <m0>world<p0> test<p1> more<m1>"
+              (lambda ()
+                (set-mark (point))
+                (forward-word 1)))
+  (let* ((inner-test (ert-get-test 'inner-mark-position-wrong))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
 
 ;;; Edge case tests
 
@@ -100,21 +109,33 @@
 (cpo-tesmo-test test-deactivate-mark
             "foo <m0>bar<p0><p1> baz"
             'deactivate-mark)
-(cpo-tesmo-test test-deactivate-mark-failure
-            "foo <m0><m1>bar<p0><p1> baz"
-            'deactivate-mark
-            :expected-result :failed)
+(ert-deftest test-deactivate-mark-failure ()
+  "Verify that tesmo catches unexpected mark activity after deactivate-mark."
+  (cpo-tesmo-test inner-deactivate-mark-failure
+              "foo <m0><m1>bar<p0><p1> baz"
+              'deactivate-mark)
+  (let* ((inner-test (ert-get-test 'inner-deactivate-mark-failure))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
 (cpo-tesmo-test test-mark-left-over
             "foo <m0><m1>bar<p0><p1> baz"
             'ignore)
-(cpo-tesmo-test test-mark-left-over-failure
-            "foo <m0>bar<p0><p1> baz"
-            'ignore
-            :expected-result :failed)
-(cpo-tesmo-test test-mark-no-activate-failure
-            "foo <m1>bar<p0><p1> baz"
-            'ignore
-            :expected-result :failed)
+(ert-deftest test-mark-left-over-failure ()
+  "Verify that tesmo catches a leftover active mark."
+  (cpo-tesmo-test inner-mark-left-over-failure
+              "foo <m0>bar<p0><p1> baz"
+              'ignore)
+  (let* ((inner-test (ert-get-test 'inner-mark-left-over-failure))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
+(ert-deftest test-mark-no-activate-failure ()
+  "Verify that tesmo catches missing mark activation."
+  (cpo-tesmo-test inner-mark-no-activate-failure
+              "foo <m1>bar<p0><p1> baz"
+              'ignore)
+  (let* ((inner-test (ert-get-test 'inner-mark-no-activate-failure))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
 
 ;; Test that explicitly tests transient-mark-mode differences with a command that matters
 ;; Use beginning-of-buffer which sets mark to remember position
@@ -123,11 +144,15 @@
             'beginning-of-buffer
             :transient-mark-mode t)
 
-(cpo-tesmo-test test-transient-mark-mode-off-beginning-buffer
-            "<p1>hello <p0>world"
-            'beginning-of-buffer
-            :transient-mark-mode nil
-            :expected-result :failed)
+(ert-deftest test-transient-mark-mode-off-beginning-buffer ()
+  "Verify that tesmo catches unexpected mark activity with transient-mark-mode off."
+  (cpo-tesmo-test inner-transient-mark-mode-off-beginning-buffer
+              "<p1>hello <p0>world"
+              'beginning-of-buffer
+              :transient-mark-mode nil)
+  (let* ((inner-test (ert-get-test 'inner-transient-mark-mode-off-beginning-buffer))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
 
 ;; Demonstrate transient-mark-mode argument working - both should behave the same way
 (cpo-tesmo-test test-explicit-transient-mark-on

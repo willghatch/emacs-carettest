@@ -89,19 +89,27 @@
              :point-marker "|point|"
              :mark-marker "|mark|")
 
-;;; Expected failure tests - these demonstrate tesmut catching errors
+;;; Tests verifying tesmut catches errors
 
-(cpo-tesmut-test test-insert-wrong-result
-             "hello <p>world"
-             "hello Y<p>world"
-             (lambda () (insert "X"))
-             :expected-result :failed)
+(ert-deftest test-insert-wrong-result ()
+  "Verify that tesmut catches a wrong insertion result."
+  (cpo-tesmut-test inner-insert-wrong-result
+               "hello <p>world"
+               "hello Y<p>world"
+               (lambda () (insert "X")))
+  (let* ((inner-test (ert-get-test 'inner-insert-wrong-result))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
 
-(cpo-tesmut-test test-delete-wrong-result
-             "hello<p>world"
-             "hello<p>world"
-             'delete-char
-             :expected-result :failed)
+(ert-deftest test-delete-wrong-result ()
+  "Verify that tesmut catches a wrong deletion result."
+  (cpo-tesmut-test inner-delete-wrong-result
+               "hello<p>world"
+               "hello<p>world"
+               'delete-char)
+  (let* ((inner-test (ert-get-test 'inner-delete-wrong-result))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
 
 ;;; Edge case tests
 
@@ -157,15 +165,19 @@
 			                    (lambda () (insert "B"))
 			                    (lambda () (insert "C"))))
 
-;;; Expected failure test for sequence
+;;; Test verifying tesmut catches a sequence error
 
-(cpo-tesmut-test test-sequence-wrong-result
-	           :buffer-states '("hello <p>world"
-			                        "hello X<p>world"
-			                        "hello XY<p>world")
-	           :functions '((lambda () (insert "X"))
-			                    (lambda () (insert "Z")))
-	           :expected-result :failed)
+(ert-deftest test-sequence-wrong-result ()
+  "Verify that tesmut catches a wrong result in a multi-step sequence."
+  (cpo-tesmut-test inner-sequence-wrong-result
+	             :buffer-states '("hello <p>world"
+			                          "hello X<p>world"
+			                          "hello XY<p>world")
+	             :functions '((lambda () (insert "X"))
+			                      (lambda () (insert "Z"))))
+  (let* ((inner-test (ert-get-test 'inner-sequence-wrong-result))
+         (result (ert-run-test inner-test)))
+    (should (ert-test-failed-p result))))
 
 ;;; Tests for cpo-tesmut's error message format
 
