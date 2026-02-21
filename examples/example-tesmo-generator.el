@@ -5,7 +5,7 @@
 ;; Emacs movement commands on basic text, writing the result to
 ;; examples/generated-example-tests/.
 
-(require 'carettest-tesmo-generator)
+   (require 'carettest-tesmo-generator)
 
 (carettest-tesmo-generate-tests
  "The quick brown fox jumps over the lazy dog.
@@ -21,8 +21,9 @@ And a third line to test paragraph movement."
    end-of-line
    ("forward-word-2" (lambda () (forward-word 2)))
    ("backward-word-2" (lambda () (backward-word 2))))
- (format "_generated-tesmo-example-%s.el" (carettest--tesmo-generator-random-string 6))
- "example-tesmo"
- :dest-dir "examples/generated-example-tests"
- :set-mark-prob 0.3
- :transient-mark-mode-prob 0.8)
+    "_generated-tesmo-example_.el"
+    "example-tesmo"
+    :dest-dir "examples/generated-example-tests"
+    :set-mark-prob 0.3
+    :transient-mark-mode-prob 0.8
+    :file-name-random-replacement t)

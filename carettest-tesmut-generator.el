@@ -326,12 +326,19 @@ Keyword arguments:
 :set-mark-prob PROB - Probability (0.0-1.0) of setting mark before mutation (default 0.3)
 :transient-mark-mode-prob PROB - Probability (0.0-1.0) that transient-mark-mode is enabled (default 1.0)
 :generate-sequences BOOL - Generate sequence tests for lists of functions (default t)
-:setup FORM - Setup code to include in generated tests (default nil)"
+:setup FORM - Setup code to include in generated tests (default nil)
+:file-name-random-replacement VAL - Controls random characters in the output file name (default nil).
+  nil: no modification.
+  A string: replace every occurrence of that string in OUTPUT-FILE with 6 random digits
+    (e.g. :file-name-random-replacement \"RANDOM\" turns \"test-RANDOM.el\" into \"test-472938.el\").
+  t: insert 6 random digits immediately before the final \".el\" suffix of OUTPUT-FILE
+    (e.g. \"my-tests.el\" becomes \"my-tests472938.el\")."
   (let ((set-mark-prob 0.3)
         (transient-mark-mode-prob 1.0)
         (generate-sequences t)
         (setup nil)
         (dest-dir nil)
+        (file-name-random-replacement nil)
         (remaining-args args))
 
     ;; Parse keyword arguments
@@ -342,15 +349,32 @@ Keyword arguments:
         (:transient-mark-mode-prob (setq transient-mark-mode-prob (pop remaining-args)))
         (:generate-sequences (setq generate-sequences (pop remaining-args)))
         (:setup (setq setup (pop remaining-args)))
+        (:file-name-random-replacement (setq file-name-random-replacement (pop remaining-args)))
         (other (error "Unknown keyword argument: %s" other))))
 
     ;; Determine transient-mark-mode value based on probability
     (let* ((transient-mark-mode-val (if (< (random 100) (* transient-mark-mode-prob 100)) t nil))
+           (random-digits (format "%06d" (random 1000000)))
+           (modified-output-file
+            (cond
+             ((null file-name-random-replacement) output-file)
+             ((eq file-name-random-replacement t)
+              (if (and (stringp output-file) (string-suffix-p ".el" output-file))
+                  (concat (substring output-file 0 (- (length output-file) 3))
+                          random-digits ".el")
+                output-file))
+             ((stringp file-name-random-replacement)
+              (if (stringp output-file)
+                  (replace-regexp-in-string
+                   (regexp-quote file-name-random-replacement)
+                   random-digits output-file t t)
+                output-file))
+             (t output-file)))
            (effective-output-file (if dest-dir
                                       `(progn
                                          (make-directory ,dest-dir t)
-                                         (expand-file-name ,output-file ,dest-dir))
-                                    output-file)))
+                                         (expand-file-name ,modified-output-file ,dest-dir))
+                                    modified-output-file)))
       `(carettest--tesmut-generate-tests ,test-text ,num-positions ,mutation-functions
                                          ,effective-output-file ,test-prefix
                                          ,set-mark-prob ,transient-mark-mode-val ,generate-sequences ,setup))))
