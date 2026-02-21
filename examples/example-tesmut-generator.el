@@ -1,5 +1,5 @@
 #!/bin/sh
-":"; exec emacs --batch -L "$(dirname "$0")/.." --load "$0" "$@" # ;;; example-tesmut-generator.el --- Example: generate tests for basic Emacs mutations -*- lexical-binding: t; -*-
+":"; exec emacs --batch -L "$(dirname "$0")/.." --load "$0" "$@" # ;;; example-tesmut-generator.el --- Example: generate tests for basic Emacs mutations -*- lexical-binding: t; mode: emacs-lisp; -*-
 
 ;; This example uses carettest-tesmut-generator to capture behavior of built-in
 ;; Emacs buffer-mutation commands on basic text, writing the result to
