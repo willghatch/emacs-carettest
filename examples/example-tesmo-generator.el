@@ -21,7 +21,7 @@ And a third line to test paragraph movement."
    end-of-line
    ("forward-word-2" (lambda () (forward-word 2)))
    ("backward-word-2" (lambda () (backward-word 2))))
- "generated-tesmo-example.el"
+ (format "_generated-tesmo-example-%s.el" (carettest--tesmo-generator-random-string 6))
  "example-tesmo"
  :dest-dir "examples/generated-example-tests"
  :set-mark-prob 0.3

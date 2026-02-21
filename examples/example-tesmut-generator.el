@@ -20,7 +20,7 @@ And a third line for extra coverage."
        'downcase-word
        'transpose-chars
        '("kill-2-words" (lambda () (kill-word 2))))
- "generated-tesmut-example.el"
+ (format "_generated-tesmut-example-%s.el" (carettest--tesmut-generator-random-string 6))
  "example-tesmut"
  :dest-dir "examples/generated-example-tests"
  :set-mark-prob 0.2

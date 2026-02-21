@@ -69,8 +69,9 @@ cd "$SCRIPT_DIR"
 
 if $RUN_GENERATORS; then
     # Remove stale generated files so generators start fresh each run
-    rm -f "$GENERATED_DIR/generated-tesmo-example.el"
-    rm -f "$GENERATED_DIR/generated-tesmut-example.el"
+    if [ -d "$GENERATED_DIR" ]; then
+        rm -f "$GENERATED_DIR"/*.el
+    fi
 
     # Run example generators (they create examples/generated-example-tests/ if needed)
     emacs -batch \
@@ -92,7 +93,9 @@ if $RUN_CORE; then
 fi
 
 if $RUN_GENERATORS; then
-    TEST_ARGS+=(-l "$GENERATED_DIR/generated-tesmo-example.el" -l "$GENERATED_DIR/generated-tesmut-example.el")
+    for f in "$GENERATED_DIR"/*.el; do
+        [ -f "$f" ] && TEST_ARGS+=(-l "$f")
+    done
 fi
 
 emacs -batch "${TEST_ARGS[@]}" -f ert-run-tests-batch-and-exit
