@@ -275,30 +275,39 @@ MOVEMENT-FUNCTIONS: List of movement functions to test. Each element can be:
   - A symbol (e.g. 'forward-word)
   - A lambda form (e.g. '(lambda () (forward-word 2)))
   - A list of (name function) for better closure naming (e.g. '(\"forward-2-words\" (lambda () (forward-word 2))))
-OUTPUT-FILE: File to write generated tests to
+OUTPUT-FILE: File to write generated tests to (basename when :dest-dir is given)
 TEST-PREFIX: Prefix for generated test names
 
 Keyword arguments:
+:dest-dir DIR - Directory to write OUTPUT-FILE into; created if absent (default nil)
 :set-mark-prob PROB - Probability (0.0-1.0) of setting mark before movement (default 0.3)
 :transient-mark-mode-prob PROB - Probability (0.0-1.0) that transient-mark-mode is enabled (default 1.0)
 :setup FORM - Setup code to include in generated tests (default nil)"
   (let ((set-mark-prob 0.3)
         (transient-mark-mode-prob 1.0)
         (setup nil)
+        (dest-dir nil)
         (remaining-args args))
 
     ;; Parse keyword arguments
     (while remaining-args
       (pcase (pop remaining-args)
+        (:dest-dir (setq dest-dir (pop remaining-args)))
         (:set-mark-prob (setq set-mark-prob (pop remaining-args)))
         (:transient-mark-mode-prob (setq transient-mark-mode-prob (pop remaining-args)))
         (:setup (setq setup (pop remaining-args)))
         (other (error "Unknown keyword argument: %s" other))))
 
     ;; Determine transient-mark-mode value based on probability
-    (let ((transient-mark-mode-val (if (< (random 100) (* transient-mark-mode-prob 100)) t nil)))
-      `(cpo-tesmo--generate-tests ,test-text ,num-positions ,movement-functions ,output-file ,test-prefix
-                              ,set-mark-prob ,transient-mark-mode-val ,setup))))
+    (let* ((transient-mark-mode-val (if (< (random 100) (* transient-mark-mode-prob 100)) t nil))
+           (effective-output-file (if dest-dir
+                                      `(progn
+                                         (make-directory ,dest-dir t)
+                                         (expand-file-name ,output-file ,dest-dir))
+                                    output-file)))
+      `(cpo-tesmo--generate-tests ,test-text ,num-positions ,movement-functions
+                                  ,effective-output-file ,test-prefix
+                                  ,set-mark-prob ,transient-mark-mode-val ,setup))))
 
 (defun tesmo-generate-simple-tests ()
   "Generate some simple example test files for demonstration."

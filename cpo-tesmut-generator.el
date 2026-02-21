@@ -318,10 +318,11 @@ MUTATION-FUNCTIONS: List of mutation functions to test. Each element can be:
   - A lambda form (e.g. '(lambda () (insert \"X\")))
   - A list of (name function) for better closure naming (e.g. '(\"insert-X\" (lambda () (insert \"X\"))))
   - A list of functions for multi-step sequence tests
-OUTPUT-FILE: File to write generated tests to
+OUTPUT-FILE: File to write generated tests to (basename when :dest-dir is given)
 TEST-PREFIX: Prefix for generated test names
 
 Keyword arguments:
+:dest-dir DIR - Directory to write OUTPUT-FILE into; created if absent (default nil)
 :set-mark-prob PROB - Probability (0.0-1.0) of setting mark before mutation (default 0.3)
 :transient-mark-mode-prob PROB - Probability (0.0-1.0) that transient-mark-mode is enabled (default 1.0)
 :generate-sequences BOOL - Generate sequence tests for lists of functions (default t)
@@ -330,11 +331,13 @@ Keyword arguments:
         (transient-mark-mode-prob 1.0)
         (generate-sequences t)
         (setup nil)
+        (dest-dir nil)
         (remaining-args args))
 
     ;; Parse keyword arguments
     (while remaining-args
       (pcase (pop remaining-args)
+        (:dest-dir (setq dest-dir (pop remaining-args)))
         (:set-mark-prob (setq set-mark-prob (pop remaining-args)))
         (:transient-mark-mode-prob (setq transient-mark-mode-prob (pop remaining-args)))
         (:generate-sequences (setq generate-sequences (pop remaining-args)))
@@ -342,9 +345,15 @@ Keyword arguments:
         (other (error "Unknown keyword argument: %s" other))))
 
     ;; Determine transient-mark-mode value based on probability
-    (let ((transient-mark-mode-val (if (< (random 100) (* transient-mark-mode-prob 100)) t nil)))
-      `(cpo-tesmut--generate-tests ,test-text ,num-positions ,mutation-functions ,output-file ,test-prefix
-                               ,set-mark-prob ,transient-mark-mode-val ,generate-sequences ,setup))))
+    (let* ((transient-mark-mode-val (if (< (random 100) (* transient-mark-mode-prob 100)) t nil))
+           (effective-output-file (if dest-dir
+                                      `(progn
+                                         (make-directory ,dest-dir t)
+                                         (expand-file-name ,output-file ,dest-dir))
+                                    output-file)))
+      `(cpo-tesmut--generate-tests ,test-text ,num-positions ,mutation-functions
+                                   ,effective-output-file ,test-prefix
+                                   ,set-mark-prob ,transient-mark-mode-val ,generate-sequences ,setup))))
 
 (defun tesmut-generate-simple-tests ()
   "Generate some simple example test files for demonstration."
