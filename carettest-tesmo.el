@@ -1,8 +1,8 @@
-;;; cpo-tesmo.el --- Testing for movement commands -*- lexical-binding: t; -*-
+;;; carettest-tesmo.el --- Testing for movement commands -*- lexical-binding: t; -*-
 
 (require 'ert)
 
-(defun cpo-tesmo--parse-buffer-with-markers (text &optional point-before point-after mark-before mark-after)
+(defun carettest--tesmo-parse-buffer-with-markers (text &optional point-before point-after mark-before mark-after)
   "Parse TEXT with position markers, return positions and clean text.
 Returns (clean-text point-before-pos point-after-pos mark-before-pos mark-after-pos original-lines).
 Positions are 0-based for the clean text."
@@ -62,7 +62,7 @@ Positions are 0-based for the clean text."
           (gethash 'mark-after positions)
           original-lines)))
 
-(defun cpo-tesmo--buffer-position-to-line-col (pos text)
+(defun carettest--tesmo-buffer-position-to-line-col (pos text)
   "Convert buffer position POS to line and column in TEXT.
 Returns (line-num col-num line-content) where line-num is 1-based."
   (let ((lines (split-string text "\n"))
@@ -78,13 +78,13 @@ Returns (line-num col-num line-content) where line-num is 1-based."
       ;; If we get here, position is beyond end of text
       (list line-num 0 ""))))
 
-(defun cpo-tesmo--insert-marker-at-position (text pos marker)
+(defun carettest--tesmo-insert-marker-at-position (text pos marker)
   "Insert MARKER at position POS in TEXT, return modified text."
   (if (and pos (>= pos 0) (<= pos (length text)))
       (concat (substring text 0 pos) marker (substring text pos))
     text))
 
-(defun cpo-tesmo--filter-markers-except (text keep-marker all-markers)
+(defun carettest--tesmo-filter-markers-except (text keep-marker all-markers)
   "Remove all markers from TEXT except KEEP-MARKER.
 ALL-MARKERS is the list of all possible markers to filter out."
   (let ((result text))
@@ -93,21 +93,21 @@ ALL-MARKERS is the list of all possible markers to filter out."
         (setq result (replace-regexp-in-string (regexp-quote marker) "" result))))
     result))
 
-(defun cpo-tesmo--format-failure-message (test-name expected-pos actual-pos pos-type text original-lines marker all-markers)
+(defun carettest--tesmo-format-failure-message (test-name expected-pos actual-pos pos-type text original-lines marker all-markers)
   "Format a detailed failure message for position mismatch."
-  (let* ((expected-info (when expected-pos (cpo-tesmo--buffer-position-to-line-col expected-pos text)))
-         (actual-info (cpo-tesmo--buffer-position-to-line-col actual-pos text))
+  (let* ((expected-info (when expected-pos (carettest--tesmo-buffer-position-to-line-col expected-pos text)))
+         (actual-info (carettest--tesmo-buffer-position-to-line-col actual-pos text))
          (expected-line-num (when expected-info (nth 0 expected-info)))
          (actual-line-num (nth 0 actual-info))
          (actual-line-content (nth 2 actual-info))
          (actual-col (nth 1 actual-info))
-         (marked-actual-line (cpo-tesmo--insert-marker-at-position actual-line-content actual-col marker))
+         (marked-actual-line (carettest--tesmo-insert-marker-at-position actual-line-content actual-col marker))
          (original-expected-line (if (and expected-line-num (<= expected-line-num (length original-lines)))
                                      (nth (1- expected-line-num) original-lines)
                                    "N/A"))
          (filtered-expected-line (if (string= original-expected-line "N/A")
                                      "N/A"
-                                   (cpo-tesmo--filter-markers-except original-expected-line marker all-markers))))
+                                   (carettest--tesmo-filter-markers-except original-expected-line marker all-markers))))
 
     (format "%s mismatch for %s (%s): Expected: %s (line %s, pos %s) Actual: %s (line %s, pos %s)"
             test-name
@@ -120,7 +120,7 @@ ALL-MARKERS is the list of all possible markers to filter out."
             (or actual-line-num "N/A")
             (or actual-pos "N/A"))))
 
-(defmacro cpo-tesmo-test (name text movement-function &rest args)
+(defmacro carettest-tesmo-test (name text movement-function &rest args)
   "Test movement function with position markers in text.
 NAME: test name for ert
 TEXT: buffer text with position markers
@@ -150,7 +150,7 @@ ARGS: optional arguments:
 
     `(ert-deftest ,name ()
        :expected-result ,expected-result
-       (let* ((parse-result (cpo-tesmo--parse-buffer-with-markers
+       (let* ((parse-result (carettest--tesmo-parse-buffer-with-markers
                              ,text
                              ,(car points-list)
                              ,(cadr points-list)
@@ -199,7 +199,7 @@ ARGS: optional arguments:
                    ;; Check point position
                    (when point-after-pos
                      (unless (= actual-point-pos point-after-pos)
-                       (ert-fail (cpo-tesmo--format-failure-message
+                       (ert-fail (carettest--tesmo-format-failure-message
                                   ,(symbol-name name)
                                   point-after-pos
                                   actual-point-pos
@@ -216,7 +216,7 @@ ARGS: optional arguments:
                          (unless mark-active
                            (ert-fail (format "%s: Expected mark to be active but it was not" ,(symbol-name name))))
                          (unless (and actual-mark-pos (= actual-mark-pos mark-after-pos))
-                           (ert-fail (cpo-tesmo--format-failure-message
+                           (ert-fail (carettest--tesmo-format-failure-message
                                       ,(symbol-name name)
                                       mark-after-pos
                                       actual-mark-pos
@@ -231,4 +231,4 @@ ARGS: optional arguments:
              ;; Restore transient-mark-mode
              (setq transient-mark-mode old-transient-mark-mode)))))))
 
-(provide 'cpo-tesmo)
+(provide 'carettest-tesmo)

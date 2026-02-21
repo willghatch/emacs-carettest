@@ -1,12 +1,12 @@
-;;; cpo-tesmo-generator.el --- Generate random cpo-tesmo tests -*- lexical-binding: t; -*-
+;;; carettest-tesmo-generator.el --- Generate random carettest-tesmo tests -*- lexical-binding: t; -*-
 
-;; This file provides functions to automatically generate cpo-tesmo test cases
+;; This file provides functions to automatically generate carettest-tesmo test cases
 ;; by running movement functions at random positions in test text.
 ;; IE this is a tool for making random tests that capture current behavior.
 
-(require 'cpo-tesmo)
+(require 'carettest-tesmo)
 
-(defun cpo-tesmo-generator--random-string (length)
+(defun carettest--tesmo-generator-random-string (length)
   "Generate a random string of LENGTH containing lowercase letters."
   (let ((chars "abcdefghijklmnopqrstuvwxyz")
         (result ""))
@@ -14,14 +14,14 @@
       (setq result (concat result (string (aref chars (random (length chars)))))))
     result))
 
-(defun cpo-tesmo-generator--random-position (text)
+(defun carettest--tesmo-generator-random-position (text)
   "Return a random valid position (0-based) in TEXT."
   (let ((max-pos (length text)))
     (if (= max-pos 0)
         0
       (random max-pos))))
 
-(defun cpo-tesmo-generator--capture-movement (text start-pos movement-function &optional set-mark transient-mark-mode-val)
+(defun carettest--tesmo-generator-capture-movement (text start-pos movement-function &optional set-mark transient-mark-mode-val)
   "Capture the result of running MOVEMENT-FUNCTION at START-POS in TEXT.
 Returns (start-pos end-pos mark-start-pos mark-end-pos success error-message).
 If SET-MARK is non-nil, sets mark at a random position before movement.
@@ -39,7 +39,7 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
 
                 ;; Optionally set mark at random position
                 (when set-mark
-                  (let ((mark-pos (cpo-tesmo-generator--random-position text)))
+                  (let ((mark-pos (carettest--tesmo-generator-random-position text)))
                     (set-mark (1+ mark-pos))  ; Convert to 1-based
                     (activate-mark)
                     (setq mark-start-pos mark-pos)))
@@ -61,7 +61,7 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
     (error
      (list start-pos nil nil nil nil (error-message-string err)))))
 
-(defun cpo-tesmo-generator--format-position-marker (pos text marker)
+(defun carettest--tesmo-generator-format-position-marker (pos text marker)
   "Insert MARKER at POS in TEXT, handling edge cases."
   (cond
    ((null pos) "")
@@ -69,9 +69,9 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
    ((>= pos (length text)) (concat text marker))
    (t (concat (substring text 0 pos) marker (substring text pos)))))
 
-(defun cpo-tesmo-generator--create-cpo-tesmo-test (text start-pos end-pos mark-start-pos mark-end-pos
-                                                movement-function test-name original-function
-                                                &optional transient-mark-mode-val setup)
+(defun carettest--tesmo-generator-create-carettest-tesmo-test (text start-pos end-pos mark-start-pos mark-end-pos
+                                                                    movement-function test-name original-function
+                                                                    &optional transient-mark-mode-val setup)
   "Create a tesmo test string from captured movement data.
 If TRANSIENT-MARK-MODE-VAL is non-nil and not t, include :transient-mark-mode in the test."
   (let ((test-text text)
@@ -109,7 +109,7 @@ If TRANSIENT-MARK-MODE-VAL is non-nil and not t, include :transient-mark-mode in
                                 marker
                                 (substring test-text pos)))))
 
-    ;; Build the cpo-tesmo-test S-expression using proper data structures
+    ;; Build the carettest-tesmo-test S-expression using proper data structures
     (let* ((movement-expr (cond
                            ((symbolp original-function)
                             `(quote ,original-function))
@@ -126,17 +126,17 @@ If TRANSIENT-MARK-MODE-VAL is non-nil and not t, include :transient-mark-mode in
                             ;; For other functions, use the original form
                             original-function)))
            ;; Build the complete test expression as an S-expression
-           (test-expr `(cpo-tesmo-test ,test-name
-                                   ,test-text
-                                   ,movement-expr
-                                   :transient-mark-mode ,transient-mark-mode-val
-                                   ,@(when setup `(:setup ,setup))
-                                   :points ("<p0>" "<p1>")
-                                   :marks ("<m0>" "<m1>"))))
+           (test-expr `(carettest-tesmo-test ,test-name
+                                             ,test-text
+                                             ,movement-expr
+                                             :transient-mark-mode ,transient-mark-mode-val
+                                             ,@(when setup `(:setup ,setup))
+                                             :points ("<p0>" "<p1>")
+                                             :marks ("<m0>" "<m1>"))))
       ;; Use pp-to-string to format the S-expression nicely
       (pp-to-string test-expr))))
 
-(defun cpo-tesmo-generator--function-name (func)
+(defun carettest--tesmo-generator-function-name (func)
   "Get a readable name for FUNC.
 FUNC can be:
 - A symbol (returns symbol-name)
@@ -145,17 +145,17 @@ FUNC can be:
   (cond
    ((symbolp func) (symbol-name func))
    ((and (listp func) (eq (car func) 'lambda))
-    (format "lambda-%s" (cpo-tesmo-generator--random-string 4)))
+    (format "lambda-%s" (carettest--tesmo-generator-random-string 4)))
    ((and (listp func) (= (length func) 2))
     ;; Handle (name function) format
     (let ((name (car func)))
       (if (symbolp name)
           (symbol-name name)
         (format "%s" name))))
-   (t (format "func-%s" (cpo-tesmo-generator--random-string 4)))))
+   (t (format "func-%s" (carettest--tesmo-generator-random-string 4)))))
 
-(defun cpo-tesmo--generate-tests (test-text num-positions movement-functions output-file test-prefix
-                                        set-mark-prob transient-mark-mode-setting &optional setup)
+(defun carettest--tesmo-generate-tests (test-text num-positions movement-functions output-file test-prefix
+                                                  set-mark-prob transient-mark-mode-setting &optional setup)
   "Generate random tesmo tests and write them to OUTPUT-FILE.
 
 TEST-TEXT: Multi-line string to test movement functions on
@@ -188,9 +188,9 @@ TRANSIENT-MARK-MODE-SETTING: Value for transient-mark-mode during tests"
                                (t movement-func)))        ; Use symbol as-is
              (original-func-form movement-func))          ; Preserve original form for test code
         (dotimes (i num-positions)
-          (let* ((start-pos (cpo-tesmo-generator--random-position test-text))
+          (let* ((start-pos (carettest--tesmo-generator-random-position test-text))
                  (set-mark (< (/ (float (random 100)) 100) set-mark-prob))
-                 (result (cpo-tesmo-generator--capture-movement test-text start-pos executable-func set-mark transient-mark-mode-setting))
+                 (result (carettest--tesmo-generator-capture-movement test-text start-pos executable-func set-mark transient-mark-mode-setting))
                  (success (nth 4 result)))
 
             (when (and success  ; Only generate test if movement succeeded
@@ -200,10 +200,10 @@ TRANSIENT-MARK-MODE-SETTING: Value for transient-mark-mode during tests"
               (let* ((end-pos (nth 1 result))
                      (mark-start-pos (nth 2 result))
                      (mark-end-pos (nth 3 result))
-                     (func-name (cpo-tesmo-generator--function-name original-func-form))
-                     (random-suffix (cpo-tesmo-generator--random-string 6))
+                     (func-name (carettest--tesmo-generator-function-name original-func-form))
+                     (random-suffix (carettest--tesmo-generator-random-string 6))
                      (test-name (intern (format "%s-%s__%s" test-prefix func-name random-suffix)))
-                     (test-code (cpo-tesmo-generator--create-cpo-tesmo-test
+                     (test-code (carettest--tesmo-generator-create-carettest-tesmo-test
                                  test-text start-pos end-pos mark-start-pos mark-end-pos
                                  executable-func test-name original-func-form transient-mark-mode-setting setup)))
                 (push test-code generated-tests)
@@ -247,12 +247,12 @@ TRANSIENT-MARK-MODE-SETTING: Value for transient-mark-mode during tests"
         ;; File doesn't exist, create new file
         (with-temp-file output-file
           (insert ";;; " (file-name-nondirectory output-file)
-                  " --- Generated cpo-tesmo tests -*- lexical-binding: t; -*-\n\n")
+                  " --- Generated carettest-tesmo tests -*- lexical-binding: t; -*-\n\n")
           (insert ";; To run these tests from the command line:\n")
-          (insert ";; emacs -batch -l ert -l cpo-tesmo.el -l "
+          (insert ";; emacs -batch -l ert -l carettest-tesmo.el -l "
                   (file-name-nondirectory output-file)
                   " -f ert-run-tests-batch-and-exit\n\n")
-          (insert "(require 'cpo-tesmo)\n\n")
+          (insert "(require 'carettest-tesmo)\n\n")
           (insert ";; Generated " (number-to-string test-count) " tests\n\n")
 
           ;; Insert tests in reverse order so they appear in the original order
@@ -262,11 +262,11 @@ TRANSIENT-MARK-MODE-SETTING: Value for transient-mark-mode during tests"
       (message "Generated %d tests in %s (total: %d)" test-count output-file total-test-count)
       test-count)))
 
-(defmacro cpo-tesmo-generate-tests (test-text num-positions movement-functions output-file test-prefix
-                                          &rest args)
+(defmacro carettest-tesmo-generate-tests (test-text num-positions movement-functions output-file test-prefix
+                                                    &rest args)
   "Generate random tesmo tests and write them to OUTPUT-FILE.
 
-This is a macro wrapper around `cpo-tesmo--generate-tests' that properly handles
+This is a macro wrapper around `carettest--tesmo-generate-tests' that properly handles
 default values for optional arguments.
 
 TEST-TEXT: Multi-line string to test movement functions on
@@ -305,16 +305,16 @@ Keyword arguments:
                                          (make-directory ,dest-dir t)
                                          (expand-file-name ,output-file ,dest-dir))
                                     output-file)))
-      `(cpo-tesmo--generate-tests ,test-text ,num-positions ,movement-functions
-                                  ,effective-output-file ,test-prefix
-                                  ,set-mark-prob ,transient-mark-mode-val ,setup))))
+      `(carettest--tesmo-generate-tests ,test-text ,num-positions ,movement-functions
+                                        ,effective-output-file ,test-prefix
+                                        ,set-mark-prob ,transient-mark-mode-val ,setup))))
 
-(defun tesmo-generate-simple-tests ()
+(defun carettest-tesmo-generate-simple-tests ()
   "Generate some simple example test files for demonstration."
   (interactive)
 
   ;; Test 1: Basic word movement
-  (cpo-tesmo-generate-tests
+  (carettest-tesmo-generate-tests
    "The quick brown fox jumps over the lazy dog"
    10
    '(forward-word backward-word forward-char backward-char)
@@ -322,7 +322,7 @@ Keyword arguments:
    "test-basic")
 
   ;; Test 2: Line movement with multiline text
-  (cpo-tesmo-generate-tests
+  (carettest-tesmo-generate-tests
    "First line of text\nSecond line here\nThird line with more words\nFourth and final line"
    8
    '(beginning-of-line end-of-line forward-line backward-line)
@@ -330,7 +330,7 @@ Keyword arguments:
    "test-lines")
 
   ;; Test 3: Buffer movement
-  (cpo-tesmo-generate-tests
+  (carettest-tesmo-generate-tests
    "Start of buffer\nMiddle content\nEnd of buffer"
    5
    '(beginning-of-buffer end-of-buffer)
@@ -339,7 +339,7 @@ Keyword arguments:
    :transient-mark-mode-prob 0.0) ; Never enable transient-mark-mode
 
   ;; Test 4: Mixed movements with higher mark probability
-  (cpo-tesmo-generate-tests
+  (carettest-tesmo-generate-tests
    "Hello world! This is a test string.\nWith multiple lines for testing.\nAnd punctuation, too!"
    15
    '(forward-word backward-word forward-sentence backward-sentence)
@@ -348,7 +348,7 @@ Keyword arguments:
    :set-mark-prob 0.7) ; 70% chance of setting mark
 
   ;; Test 5: Lambda functions with better names (demonstrates new naming feature)
-  (cpo-tesmo-generate-tests
+  (carettest-tesmo-generate-tests
    "One two three four five six seven eight nine ten"
    12
    (list 'forward-word
@@ -360,7 +360,7 @@ Keyword arguments:
    "__testing_cpo_tesmo_generator_5.el"
    "test-lambda"))
 
-(defmacro cpo-tesmo-generate-tests-batch (functions output-file base-test-prefix &rest test-inputs)
+(defmacro carettest-tesmo-generate-tests-batch (functions output-file base-test-prefix &rest test-inputs)
   "Generate multiple test suites using the same function list but different test inputs.
 All tests will be written to the same output file, with subsequent calls appending to the file.
 
@@ -376,7 +376,7 @@ TEST-INPUTS: List of test input specifications. Each element should be a plist w
   :setup FORM - Setup code (optional)
 
 Example usage:
-  (cpo-tesmo-generate-tests-batch
+  (carettest-tesmo-generate-tests-batch
    '(forward-word backward-word)
    \"my-tests.el\"
    \"test-words\"
@@ -394,11 +394,11 @@ Example usage:
              (transient-mark-mode-prob (or (plist-get input :transient-mark-mode-prob) 0.8))
              (setup (plist-get input :setup))
              (test-name (if suffix
-                           (format "%s-%s" base-test-prefix suffix)
-                         (format "%s-%d" base-test-prefix test-count))))
+                            (format "%s-%s" base-test-prefix suffix)
+                          (format "%s-%d" base-test-prefix test-count))))
 
         (when (and text positions)
-          (push `(cpo-tesmo-generate-tests
+          (push `(carettest-tesmo-generate-tests
                   ,text
                   ,positions
                   (quote ,functions)
@@ -413,4 +413,4 @@ Example usage:
     ;; Return a progn form with all the test generation calls
     `(progn ,@(reverse all-tests))))
 
-(provide 'cpo-tesmo-generator)
+(provide 'carettest-tesmo-generator)

@@ -74,21 +74,21 @@ if $RUN_GENERATORS; then
 
     # Run example generators (they create examples/generated-example-tests/ if needed)
     emacs -batch \
-        -l cpo-tesmo.el \
-        -l cpo-tesmo-generator.el \
+        -l carettest-tesmo.el \
+        -l carettest-tesmo-generator.el \
         -l examples/example-tesmo-generator.el
 
     emacs -batch \
-        -l cpo-tesmut.el \
-        -l cpo-tesmut-generator.el \
+        -l carettest-tesmut.el \
+        -l carettest-tesmut-generator.el \
         -l examples/example-tesmut-generator.el
 fi
 
 # Build test load args and run all selected tests in a single emacs invocation
-TEST_ARGS=(-l ert -l cpo-tesmo.el -l cpo-tesmut.el)
+TEST_ARGS=(-l ert -l carettest-tesmo.el -l carettest-tesmut.el)
 
 if $RUN_CORE; then
-    TEST_ARGS+=(-l test-cpo-tesmo.el -l test-cpo-tesmut.el)
+    TEST_ARGS+=(-l test-carettest-tesmo.el -l test-carettest-tesmut.el)
 fi
 
 if $RUN_GENERATORS; then

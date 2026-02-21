@@ -1,12 +1,12 @@
 ;;; example-tesmut-generator.el --- Example: generate tests for basic Emacs mutations -*- lexical-binding: t; -*-
 
-;; This example uses cpo-tesmut-generator to capture behavior of built-in
+;; This example uses carettest-tesmut-generator to capture behavior of built-in
 ;; Emacs buffer-mutation commands on basic text, writing the result to
 ;; examples/generated-example-tests/.
 
-(require 'cpo-tesmut-generator)
+(require 'carettest-tesmut-generator)
 
-(cpo-tesmut-generate-tests
+(carettest-tesmut-generate-tests
  "The quick brown fox jumps over the lazy dog.
 A second line with some more words here.
 And a third line for extra coverage."

@@ -1,8 +1,8 @@
-;;; cpo-tesmut.el --- Testing for buffer mutation commands -*- lexical-binding: t; -*-
+;;; carettest-tesmut.el --- Testing for buffer mutation commands -*- lexical-binding: t; -*-
 
 (require 'ert)
 
-(defun cpo-tesmut--parse-buffer-with-markers (text &optional point-marker mark-marker)
+(defun carettest--tesmut-parse-buffer-with-markers (text &optional point-marker mark-marker)
   "Parse TEXT with position markers, return positions and clean text.
 Returns (clean-text point-pos mark-pos original-lines).
 Positions are 0-based for the clean text."
@@ -56,7 +56,7 @@ Positions are 0-based for the clean text."
           (gethash 'mark positions)
           original-lines)))
 
-(defun cpo-tesmut--buffer-to-string-with-markers (point-marker mark-marker)
+(defun carettest--tesmut-buffer-to-string-with-markers (point-marker mark-marker)
   "Convert current buffer to string with position markers.
 Insert POINT-MARKER at point and MARK-MARKER at mark (if active)."
   (let ((text (buffer-string))
@@ -81,7 +81,7 @@ Insert POINT-MARKER at point and MARK-MARKER at mark (if active)."
     text))
 
 
-(defmacro cpo-tesmut-test (name &rest args)
+(defmacro carettest-tesmut-test (name &rest args)
   "Test buffer mutation function with before/after text comparison or sequence testing.
 
 NAME: test name for ert
@@ -145,12 +145,12 @@ Common optional arguments:
      ((and before-text after-text function)
       `(ert-deftest ,name ()
          :expected-result ,expected-result
-         (let* ((before-parse-result (cpo-tesmut--parse-buffer-with-markers
+         (let* ((before-parse-result (carettest--tesmut-parse-buffer-with-markers
                                       ,before-text ,point-marker ,mark-marker))
                 (before-clean-text (nth 0 before-parse-result))
                 (before-point-pos (nth 1 before-parse-result))
                 (before-mark-pos (nth 2 before-parse-result))
-                (after-parse-result (cpo-tesmut--parse-buffer-with-markers
+                (after-parse-result (carettest--tesmut-parse-buffer-with-markers
                                      ,after-text ,point-marker ,mark-marker))
                 (after-clean-text (nth 0 after-parse-result))
                 (after-point-pos (nth 1 after-parse-result))
@@ -186,7 +186,7 @@ Common optional arguments:
                      (funcall ,function))
 
                    ;; Get actual result
-                   (let ((actual-result (cpo-tesmut--buffer-to-string-with-markers ,point-marker ,mark-marker)))
+                   (let ((actual-result (carettest--tesmut-buffer-to-string-with-markers ,point-marker ,mark-marker)))
 
                      ;; Compare with expected result
                      (unless (string= actual-result ,after-text)
@@ -214,7 +214,7 @@ Common optional arguments:
                      (error "Number of expected states must equal number of functions"))
 
                    ;; Parse initial state and set up buffer
-                   (let* ((initial-parse-result (cpo-tesmut--parse-buffer-with-markers
+                   (let* ((initial-parse-result (carettest--tesmut-parse-buffer-with-markers
                                                  initial-state ,point-marker ,mark-marker))
                           (initial-clean-text (nth 0 initial-parse-result))
                           (initial-point-pos (nth 1 initial-parse-result))
@@ -247,7 +247,7 @@ Common optional arguments:
                              (funcall func))
 
                            ;; Get actual result and compare
-                           (let ((actual-result (cpo-tesmut--buffer-to-string-with-markers ,point-marker ,mark-marker)))
+                           (let ((actual-result (carettest--tesmut-buffer-to-string-with-markers ,point-marker ,mark-marker)))
                              (unless (string= actual-result expected-state)
                                (ert-fail (format "%s (step %d): Actual: %s, Expected: %s"
                                                  ,(symbol-name name)
@@ -262,4 +262,4 @@ Common optional arguments:
      ;; Invalid arguments
      (t (error "Invalid arguments: must provide either (:before :after :function) or (:buffer-states :functions)")))))
 
-(provide 'cpo-tesmut)
+(provide 'carettest-tesmut)

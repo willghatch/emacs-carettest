@@ -1,12 +1,12 @@
 ;;; example-tesmo-generator.el --- Example: generate tests for basic Emacs movements -*- lexical-binding: t; -*-
 
-;; This example uses cpo-tesmo-generator to capture behavior of built-in
+;; This example uses carettest-tesmo-generator to capture behavior of built-in
 ;; Emacs movement commands on basic text, writing the result to
 ;; examples/generated-example-tests/.
 
-(require 'cpo-tesmo-generator)
+(require 'carettest-tesmo-generator)
 
-(cpo-tesmo-generate-tests
+(carettest-tesmo-generate-tests
  "The quick brown fox jumps over the lazy dog.
 A second line with some more words here.
 

@@ -1,12 +1,12 @@
-;;; cpo-tesmut-generator.el --- Generate random cpo-tesmut tests -*- lexical-binding: t; -*-
+;;; carettest-tesmut-generator.el --- Generate random carettest-tesmut tests -*- lexical-binding: t; -*-
 
-;; This file provides functions to automatically generate cpo-tesmut test cases
+;; This file provides functions to automatically generate carettest-tesmut test cases
 ;; by running mutation functions at random positions in test text.
 ;; IE this is a tool for making random tests that capture current behavior.
 
-(require 'cpo-tesmut)
+(require 'carettest-tesmut)
 
-(defun cpo-tesmut-generator--random-string (length)
+(defun carettest--tesmut-generator-random-string (length)
   "Generate a random string of LENGTH containing lowercase letters."
   (let ((chars "abcdefghijklmnopqrstuvwxyz")
         (result ""))
@@ -14,14 +14,14 @@
       (setq result (concat result (string (aref chars (random (length chars)))))))
     result))
 
-(defun cpo-tesmut-generator--random-position (text)
+(defun carettest--tesmut-generator-random-position (text)
   "Return a random valid position (0-based) in TEXT."
   (let ((max-pos (length text)))
     (if (= max-pos 0)
         0
       (random max-pos))))
 
-(defun cpo-tesmut-generator--capture-mutation (text start-pos mutation-function &optional set-mark transient-mark-mode-val)
+(defun carettest--tesmut-generator-capture-mutation (text start-pos mutation-function &optional set-mark transient-mark-mode-val)
   "Capture the result of running MUTATION-FUNCTION at START-POS in TEXT.
 Returns (before-text after-text success error-message).
 If SET-MARK is non-nil, sets mark at a random position before mutation.
@@ -36,12 +36,12 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
 
               ;; Optionally set mark at random position
               (when set-mark
-                (let ((mark-pos (cpo-tesmut-generator--random-position text)))
+                (let ((mark-pos (carettest--tesmut-generator-random-position text)))
                   (set-mark (1+ mark-pos))  ; Convert to 1-based
                   (activate-mark)))
 
               ;; Capture before state
-              (let ((before-text (cpo-tesmut--buffer-to-string-with-markers "<p>" "<m>")))
+              (let ((before-text (carettest--tesmut-buffer-to-string-with-markers "<p>" "<m>")))
 
                 ;; Execute mutation function
                 (if (functionp mutation-function)
@@ -49,17 +49,17 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
                   (call-interactively mutation-function))
 
                 ;; Capture after state
-                (let ((after-text (cpo-tesmut--buffer-to-string-with-markers "<p>" "<m>")))
+                (let ((after-text (carettest--tesmut-buffer-to-string-with-markers "<p>" "<m>")))
                   (list before-text after-text t nil))))
           ;; Restore transient-mark-mode
           (setq transient-mark-mode old-transient-mark-mode)))
     (error
      (list nil nil nil (error-message-string err)))))
 
-(defun cpo-tesmut-generator--create-cpo-tesmut-test (before-text after-text mutation-function test-name original-function
-                                                         &optional transient-mark-mode-val setup)
+(defun carettest--tesmut-generator-create-carettest-tesmut-test (before-text after-text mutation-function test-name original-function
+                                                                             &optional transient-mark-mode-val setup)
   "Create a tesmut test string from captured mutation data."
-  ;; Build the cpo-tesmut-test S-expression using proper data structures
+  ;; Build the carettest-tesmut-test S-expression using proper data structures
   (let* ((function-expr (cond
                          ((symbolp original-function)
                           `(quote ,original-function))
@@ -76,18 +76,18 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
                           ;; For other functions, use the original form
                           original-function)))
          ;; Build the complete test expression as an S-expression
-         (test-expr `(cpo-tesmut-test ,test-name
-                                  :before ,before-text
-                                  :after ,after-text
-                                  :function ,function-expr
-                                  :transient-mark-mode ,transient-mark-mode-val
-                                  ,@(when setup `(:setup ,setup)))))
+         (test-expr `(carettest-tesmut-test ,test-name
+                                            :before ,before-text
+                                            :after ,after-text
+                                            :function ,function-expr
+                                            :transient-mark-mode ,transient-mark-mode-val
+                                            ,@(when setup `(:setup ,setup)))))
     ;; Use pp-to-string to format the S-expression nicely
     (pp-to-string test-expr)))
 
-(defun cpo-tesmut-generator--create-tesmut-sequence-test (buffer-states functions test-name original-functions
-                                                                    &optional transient-mark-mode-val setup)
-  "Create a cpo-tesmut-test string from captured sequence data."
+(defun carettest--tesmut-generator-create-tesmut-sequence-test (buffer-states functions test-name original-functions
+                                                                              &optional transient-mark-mode-val setup)
+  "Create a carettest-tesmut-test string from captured sequence data."
   ;; Build the functions list using proper data structures
   (let* ((functions-list (mapcar (lambda (func)
                                    (cond
@@ -98,15 +98,15 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
                                     (t func)))
                                  original-functions))
          ;; Build the complete test expression as an S-expression
-         (test-expr `(cpo-tesmut-test ,test-name
-                                  :buffer-states (quote ,buffer-states)
-                                  :functions (quote ,functions-list)
-                                  :transient-mark-mode ,transient-mark-mode-val
-                                  ,@(when setup `(:setup ,setup)))))
+         (test-expr `(carettest-tesmut-test ,test-name
+                                            :buffer-states (quote ,buffer-states)
+                                            :functions (quote ,functions-list)
+                                            :transient-mark-mode ,transient-mark-mode-val
+                                            ,@(when setup `(:setup ,setup)))))
     ;; Use pp-to-string to format the S-expression nicely
     (pp-to-string test-expr)))
 
-(defun cpo-tesmut-generator--function-name (func)
+(defun carettest--tesmut-generator-function-name (func)
   "Get a readable name for FUNC.
 FUNC can be:
 - A symbol (returns symbol-name)
@@ -115,17 +115,17 @@ FUNC can be:
   (cond
    ((symbolp func) (symbol-name func))
    ((and (listp func) (eq (car func) 'lambda))
-    (format "lambda-%s" (cpo-tesmut-generator--random-string 4)))
+    (format "lambda-%s" (carettest--tesmut-generator-random-string 4)))
    ((and (listp func) (= (length func) 2))
     ;; Handle (name function) format
     (let ((name (car func)))
       (if (symbolp name)
           (symbol-name name)
         (format "%s" name))))
-   (t (format "func-%s" (cpo-tesmut-generator--random-string 4)))))
+   (t (format "func-%s" (carettest--tesmut-generator-random-string 4)))))
 
-(defun cpo-tesmut--generate-tests (test-text num-positions mutation-functions output-file test-prefix
-                                         set-mark-prob transient-mark-mode-setting generate-sequences &optional setup)
+(defun carettest--tesmut-generate-tests (test-text num-positions mutation-functions output-file test-prefix
+                                                   set-mark-prob transient-mark-mode-setting generate-sequences &optional setup)
   "Generate random tesmut tests and write them to OUTPUT-FILE.
 
 TEST-TEXT: Multi-line string to test mutation functions on
@@ -151,7 +151,7 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
              (not (and (= (length mutation-func) 2) (not (listp (car mutation-func))))))
         ;; This is a list of functions for sequence testing
         (dotimes (i num-positions)
-          (let* ((start-pos (cpo-tesmut-generator--random-position test-text))
+          (let* ((start-pos (carettest--tesmut-generator-random-position test-text))
                  (set-mark (< (/ (float (random 100)) 100) set-mark-prob))
                  (buffer-states (list))
                  (executable-funcs (list))
@@ -190,29 +190,29 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
 
                         ;; Optionally set mark at random position
                         (when set-mark
-                          (let ((mark-pos (cpo-tesmut-generator--random-position test-text)))
+                          (let ((mark-pos (carettest--tesmut-generator-random-position test-text)))
                             (set-mark (1+ mark-pos))  ; Convert to 1-based
                             (activate-mark)))
 
                         ;; Capture initial state
-                        (push (cpo-tesmut--buffer-to-string-with-markers "<p>" "<m>") buffer-states)
+                        (push (carettest--tesmut-buffer-to-string-with-markers "<p>" "<m>") buffer-states)
 
                         ;; Execute functions and capture states
                         (dolist (executable-func executable-funcs)
                           (if (functionp executable-func)
                               (funcall executable-func)
                             (call-interactively executable-func))
-                          (push (cpo-tesmut--buffer-to-string-with-markers "<p>" "<m>") buffer-states)))
+                          (push (carettest--tesmut-buffer-to-string-with-markers "<p>" "<m>") buffer-states)))
                     ;; Restore transient-mark-mode
                     (setq transient-mark-mode old-transient-mark-mode)))
               (error (setq success nil)))
 
             (when success
               (setq buffer-states (reverse buffer-states))
-              (let* ((sequence-name (mapconcat #'cpo-tesmut-generator--function-name original-funcs "-"))
-                     (random-suffix (cpo-tesmut-generator--random-string 6))
+              (let* ((sequence-name (mapconcat #'carettest--tesmut-generator-function-name original-funcs "-"))
+                     (random-suffix (carettest--tesmut-generator-random-string 6))
                      (test-name (intern (format "%s-seq-%s__%s" test-prefix sequence-name random-suffix)))
-                     (test-code (cpo-tesmut-generator--create-tesmut-sequence-test
+                     (test-code (carettest--tesmut-generator-create-tesmut-sequence-test
                                  buffer-states executable-funcs test-name original-funcs transient-mark-mode-setting setup)))
                 (push test-code generated-tests)
                 (setq test-count (1+ test-count)))))))
@@ -234,19 +234,19 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
                                  (t mutation-func)))        ; Use symbol as-is
                (original-func-form mutation-func))          ; Preserve original form for test code
           (dotimes (i num-positions)
-            (let* ((start-pos (cpo-tesmut-generator--random-position test-text))
+            (let* ((start-pos (carettest--tesmut-generator-random-position test-text))
                    (set-mark (< (/ (float (random 100)) 100) set-mark-prob))
-                   (result (cpo-tesmut-generator--capture-mutation test-text start-pos executable-func set-mark transient-mark-mode-setting))
+                   (result (carettest--tesmut-generator-capture-mutation test-text start-pos executable-func set-mark transient-mark-mode-setting))
                    (success (nth 2 result)))
 
               (when (and success  ; Only generate test if mutation succeeded
                          (not (string= (nth 0 result) (nth 1 result))))  ; Buffer changed
                 (let* ((before-text (nth 0 result))
                        (after-text (nth 1 result))
-                       (func-name (cpo-tesmut-generator--function-name original-func-form))
-                       (random-suffix (cpo-tesmut-generator--random-string 6))
+                       (func-name (carettest--tesmut-generator-function-name original-func-form))
+                       (random-suffix (carettest--tesmut-generator-random-string 6))
                        (test-name (intern (format "%s-%s__%s" test-prefix func-name random-suffix)))
-                       (test-code (cpo-tesmut-generator--create-cpo-tesmut-test
+                       (test-code (carettest--tesmut-generator-create-carettest-tesmut-test
                                    before-text after-text executable-func test-name original-func-form transient-mark-mode-setting setup)))
                   (push test-code generated-tests)
                   (setq test-count (1+ test-count))))))))))
@@ -289,12 +289,12 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
         ;; File doesn't exist, create new file
         (with-temp-file output-file
           (insert ";;; " (file-name-nondirectory output-file)
-                  " --- Generated cpo-tesmut tests -*- lexical-binding: t; -*-\n\n")
+                  " --- Generated carettest-tesmut tests -*- lexical-binding: t; -*-\n\n")
           (insert ";; To run these tests from the command line:\n")
-          (insert ";; emacs -batch -l ert -l cpo-tesmut.el -l "
+          (insert ";; emacs -batch -l ert -l carettest-tesmut.el -l "
                   (file-name-nondirectory output-file)
                   " -f ert-run-tests-batch-and-exit\n\n")
-          (insert "(require 'cpo-tesmut)\n\n")
+          (insert "(require 'carettest-tesmut)\n\n")
           (insert ";; Generated " (number-to-string test-count) " tests\n\n")
 
           ;; Insert tests in reverse order so they appear in the original order
@@ -304,11 +304,11 @@ GENERATE-SEQUENCES: If non-nil, also generate sequence tests for lists of functi
       (message "Generated %d tests in %s (total: %d)" test-count output-file total-test-count)
       test-count)))
 
-(defmacro cpo-tesmut-generate-tests (test-text num-positions mutation-functions output-file test-prefix
-                                           &rest args)
+(defmacro carettest-tesmut-generate-tests (test-text num-positions mutation-functions output-file test-prefix
+                                                     &rest args)
   "Generate random tesmut tests and write them to OUTPUT-FILE.
 
-This is a macro wrapper around `cpo-tesmut--generate-tests' that properly handles
+This is a macro wrapper around `carettest--tesmut-generate-tests' that properly handles
 default values for optional arguments.
 
 TEST-TEXT: Multi-line string to test mutation functions on
@@ -351,16 +351,16 @@ Keyword arguments:
                                          (make-directory ,dest-dir t)
                                          (expand-file-name ,output-file ,dest-dir))
                                     output-file)))
-      `(cpo-tesmut--generate-tests ,test-text ,num-positions ,mutation-functions
-                                   ,effective-output-file ,test-prefix
-                                   ,set-mark-prob ,transient-mark-mode-val ,generate-sequences ,setup))))
+      `(carettest--tesmut-generate-tests ,test-text ,num-positions ,mutation-functions
+                                         ,effective-output-file ,test-prefix
+                                         ,set-mark-prob ,transient-mark-mode-val ,generate-sequences ,setup))))
 
-(defun tesmut-generate-simple-tests ()
+(defun carettest-tesmut-generate-simple-tests ()
   "Generate some simple example test files for demonstration."
   (interactive)
 
   ;; Test 1: Basic insertion and deletion
-  (cpo-tesmut-generate-tests
+  (carettest-tesmut-generate-tests
    "The quick brown fox jumps over the lazy dog"
    10
    (list '("insert-X" (lambda () (insert "X")))
@@ -371,7 +371,7 @@ Keyword arguments:
    "test-basic")
 
   ;; Test 2: Word operations with multiline text
-  (cpo-tesmut-generate-tests
+  (carettest-tesmut-generate-tests
    "First line of text\nSecond line here\nThird line with more words\nFourth and final line"
    8
    (list 'kill-word
@@ -381,7 +381,7 @@ Keyword arguments:
    "test-words")
 
   ;; Test 3: Region operations (higher mark probability)
-  (cpo-tesmut-generate-tests
+  (carettest-tesmut-generate-tests
    "Start of buffer\nMiddle content with UPPERCASE\nEnd of buffer"
    5
    (list 'kill-region
@@ -392,7 +392,7 @@ Keyword arguments:
    :set-mark-prob 0.8) ; 80% chance of setting mark
 
   ;; Test 4: Sequence tests with mixed mutations
-  (cpo-tesmut-generate-tests
+  (carettest-tesmut-generate-tests
    "Hello world! This is a test string."
    12
    (list 'kill-word
@@ -406,7 +406,7 @@ Keyword arguments:
    :set-mark-prob 0.5)
 
   ;; Test 5: Yank operations (requires kill-ring setup)
-  (cpo-tesmut-generate-tests
+  (carettest-tesmut-generate-tests
    "One two three four five six seven eight nine ten"
    8
    (list 'kill-word
@@ -415,7 +415,7 @@ Keyword arguments:
    "__testing_cpo_tesmut_generator_5.el"
    "test-yank"))
 
-(defmacro cpo-tesmut-generate-tests-batch (functions output-file base-test-prefix &rest test-inputs)
+(defmacro carettest-tesmut-generate-tests-batch (functions output-file base-test-prefix &rest test-inputs)
   "Generate multiple test suites using the same function list but different test inputs.
 All tests will be written to the same output file, with subsequent calls appending to the file.
 
@@ -432,7 +432,7 @@ TEST-INPUTS: List of test input specifications. Each element should be a plist w
   :setup FORM - Setup code (optional)
 
 Example usage:
-  (cpo-tesmut-generate-tests-batch
+  (carettest-tesmut-generate-tests-batch
    '(kill-word delete-char)
    \"my-tests.el\"
    \"test-mutations\"
@@ -449,15 +449,15 @@ Example usage:
              (set-mark-prob (or (plist-get input :set-mark-prob) 0.3))
              (transient-mark-mode-prob (or (plist-get input :transient-mark-mode-prob) 0.8))
              (generate-sequences (if (plist-member input :generate-sequences)
-                                   (plist-get input :generate-sequences)
-                                 t))
+                                     (plist-get input :generate-sequences)
+                                   t))
              (setup (plist-get input :setup))
              (test-name (if suffix
-                           (format "%s-%s" base-test-prefix suffix)
-                         (format "%s-%d" base-test-prefix test-count))))
+                            (format "%s-%s" base-test-prefix suffix)
+                          (format "%s-%d" base-test-prefix test-count))))
 
         (when (and text positions)
-          (push `(cpo-tesmut-generate-tests
+          (push `(carettest-tesmut-generate-tests
                   ,text
                   ,positions
                   (quote ,functions)
@@ -473,4 +473,4 @@ Example usage:
     ;; Return a progn form with all the test generation calls
     `(progn ,@(reverse all-tests))))
 
-(provide 'cpo-tesmut-generator)
+(provide 'carettest-tesmut-generator)
