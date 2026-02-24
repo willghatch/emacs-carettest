@@ -69,6 +69,10 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
    ((>= pos (length text)) (concat text marker))
    (t (concat (substring text 0 pos) marker (substring text pos)))))
 
+(defun carettest--tesmo-generator-format-element (elt)
+  "Format ELT using pp-to-string, stripping trailing newline."
+  (string-trim-right (pp-to-string elt) "\n+"))
+
 (defun carettest--tesmo-generator-create-carettest-tesmo-test (text start-pos end-pos mark-start-pos mark-end-pos
                                                                     movement-function test-name original-function
                                                                     &optional transient-mark-mode-val setup)
@@ -125,21 +129,24 @@ If TRANSIENT-MARK-MODE-VAL is non-nil and not t, include :transient-mark-mode in
                            (t
                             ;; For other functions, use the original form
                             original-function)))
-           ;; Build the complete test expression as an S-expression
-           (test-expr `(carettest-tesmo-test ,test-name
-                                             ,test-text
-                                             ,movement-expr
-                                             :transient-mark-mode ,transient-mark-mode-val
-                                             ,@(when setup `(:setup ,setup))
-                                             :points ("<p0>" "<p1>")
-                                             :marks ("<m0>" "<m1>"))))
-      ;; Use pp-to-string to format the S-expression nicely, then replace
-      ;; escaped newlines with literal newlines for readability, then
-      ;; insert a newline before the opening quote of the test string.
-      (replace-regexp-in-string
-       "\\((carettest-tesmo-test [^ ]+\\) \""
-       "\\1\n\""
-       (replace-regexp-in-string "\\\\n" "\n" (pp-to-string test-expr))))))
+           ;; Build formatted elements list: each element on its own line.
+           ;; The test string gets literal newlines; other elements use pp-to-string.
+           (formatted-elements
+            (append
+             (list "carettest-tesmo-test"
+                   (carettest--tesmo-generator-format-element test-name)
+                   (replace-regexp-in-string "\\\\n" "\n" (prin1-to-string test-text))
+                   (carettest--tesmo-generator-format-element movement-expr)
+                   ":transient-mark-mode"
+                   (carettest--tesmo-generator-format-element transient-mark-mode-val))
+             (when setup
+               (list ":setup"
+                     (carettest--tesmo-generator-format-element setup)))
+             (list ":points"
+                   (carettest--tesmo-generator-format-element '("<p0>" "<p1>"))
+                   ":marks"
+                   (carettest--tesmo-generator-format-element '("<m0>" "<m1>"))))))
+      (concat "(" (mapconcat #'identity formatted-elements "\n ") ")\n"))))
 
 (defun carettest--tesmo-generator-function-name (func)
   "Get a readable name for FUNC.

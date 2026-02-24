@@ -56,6 +56,10 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
     (error
      (list nil nil nil (error-message-string err)))))
 
+(defun carettest--tesmut-generator-format-element (elt)
+  "Format ELT using pp-to-string, stripping trailing newline."
+  (string-trim-right (pp-to-string elt) "\n+"))
+
 (defun carettest--tesmut-generator-create-carettest-tesmut-test (before-text after-text mutation-function test-name original-function
                                                                              &optional transient-mark-mode-val setup)
   "Create a tesmut test string from captured mutation data."
@@ -75,15 +79,24 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
                          (t
                           ;; For other functions, use the original form
                           original-function)))
-         ;; Build the complete test expression as an S-expression
-         (test-expr `(carettest-tesmut-test ,test-name
-                                            :before ,before-text
-                                            :after ,after-text
-                                            :function ,function-expr
-                                            :transient-mark-mode ,transient-mark-mode-val
-                                            ,@(when setup `(:setup ,setup)))))
-    ;; Use pp-to-string to format the S-expression nicely
-    (pp-to-string test-expr)))
+         ;; Build formatted elements list: each element on its own line.
+         ;; Before/after strings get literal newlines; other elements use pp-to-string.
+         (formatted-elements
+          (append
+           (list "carettest-tesmut-test"
+                 (carettest--tesmut-generator-format-element test-name)
+                 ":before"
+                 (replace-regexp-in-string "\\\\n" "\n" (prin1-to-string before-text))
+                 ":after"
+                 (replace-regexp-in-string "\\\\n" "\n" (prin1-to-string after-text))
+                 ":function"
+                 (carettest--tesmut-generator-format-element function-expr)
+                 ":transient-mark-mode"
+                 (carettest--tesmut-generator-format-element transient-mark-mode-val))
+           (when setup
+             (list ":setup"
+                   (carettest--tesmut-generator-format-element setup))))))
+    (concat "(" (mapconcat #'identity formatted-elements "\n ") ")\n")))
 
 (defun carettest--tesmut-generator-create-tesmut-sequence-test (buffer-states functions test-name original-functions
                                                                               &optional transient-mark-mode-val setup)
@@ -97,14 +110,24 @@ TRANSIENT-MARK-MODE-VAL sets the transient-mark-mode during execution."
                                      func)
                                     (t func)))
                                  original-functions))
-         ;; Build the complete test expression as an S-expression
-         (test-expr `(carettest-tesmut-test ,test-name
-                                            :buffer-states (quote ,buffer-states)
-                                            :functions (quote ,functions-list)
-                                            :transient-mark-mode ,transient-mark-mode-val
-                                            ,@(when setup `(:setup ,setup)))))
-    ;; Use pp-to-string to format the S-expression nicely
-    (pp-to-string test-expr)))
+         ;; Build formatted elements list: each element on its own line.
+         ;; Buffer-state strings get literal newlines; other elements use pp-to-string.
+         (formatted-elements
+          (append
+           (list "carettest-tesmut-test"
+                 (carettest--tesmut-generator-format-element test-name)
+                 ":buffer-states"
+                 (replace-regexp-in-string
+                  "\\\\n" "\n"
+                  (carettest--tesmut-generator-format-element (list 'quote buffer-states)))
+                 ":functions"
+                 (carettest--tesmut-generator-format-element (list 'quote functions-list))
+                 ":transient-mark-mode"
+                 (carettest--tesmut-generator-format-element transient-mark-mode-val))
+           (when setup
+             (list ":setup"
+                   (carettest--tesmut-generator-format-element setup))))))
+    (concat "(" (mapconcat #'identity formatted-elements "\n ") ")\n")))
 
 (defun carettest--tesmut-generator-function-name (func)
   "Get a readable name for FUNC.
