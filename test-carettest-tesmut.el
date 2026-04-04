@@ -165,6 +165,15 @@
 			                              (lambda () (insert "B"))
 			                              (lambda () (insert "C"))))
 
+(carettest-tesmut-test test-should-mixed-between-mutations
+                       "hello <p>world"
+                       "hello XY<p>world"
+                       (lambda ()
+                         (insert "X")
+                         (should (string= (buffer-string) "hello Xworld"))
+                         (insert "Y")
+                         (should (string= (buffer-string) "hello XYworld"))))
+
 ;;; Test verifying tesmut catches a sequence error
 
 (ert-deftest test-sequence-wrong-result ()

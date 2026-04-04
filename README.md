@@ -9,6 +9,8 @@ Other people have probably made similar things, but I didn't see anything compel
   point (and optionally mark) from one position to another.
 - **tesmut** ("test mutation"): tests that a buffer-editing command
   transforms a buffer from one state to another.
+- **tesprop** ("test properties"): tests a buffer setup against a
+  series of assertions, each wrapped in `should`.
   
 ## tesmo
 
@@ -63,6 +65,24 @@ point and `<m>` for mark in both the `:before` and `:after` strings.
 ```
 
 See docstrings in the source (or in emacs help viewer) for more options.
+
+## tesprop
+
+Use `carettest-tesprop` for assertion-style tests.  Embed a single
+`<p>` for point and, optionally, a single `<m>` for mark, then provide
+predicate forms that are wrapped in `should`.
+
+```elisp
+(carettest-tesprop test-buffer-state
+  "hello <m>world<p> test"
+  mark-active
+  (= (point) 12)
+  (= (mark) 7)
+  (string= (buffer-string) "hello world test"))
+```
+
+For lower-level use inside an existing ERT test, call
+`carettest-with-tesprop-buffer` and write the `should` forms yourself.
 
 ## Generators
 

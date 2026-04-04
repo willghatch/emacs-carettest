@@ -86,10 +86,10 @@ if $RUN_GENERATORS; then
 fi
 
 # Build test load args and run all selected tests in a single emacs invocation
-TEST_ARGS=(-l ert -l carettest-tesmo.el -l carettest-tesmut.el)
+TEST_ARGS=(-l ert -l carettest-tesmo.el -l carettest-tesmut.el -l carettest-tesprop.el)
 
 if $RUN_CORE; then
-    TEST_ARGS+=(-l test-carettest-tesmo.el -l test-carettest-tesmut.el)
+    TEST_ARGS+=(-l test-carettest-tesmo.el -l test-carettest-tesmut.el -l test-carettest-tesprop.el)
 fi
 
 if $RUN_GENERATORS; then
